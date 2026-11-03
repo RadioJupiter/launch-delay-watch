@@ -1,0 +1,5 @@
+id,name,provider,rocket,pad,net,status,window_start,window_end
+launch-001,Falcon 9 Block 5 | DemoSat,SpaceX,Falcon 9 Block 5,"Space Launch Complex 40 (Cape Canaveral SFS, FL, USA)",2026-11-12T18:00:00Z,Go,2026-11-12T18:00:00Z,2026-11-12T21:00:00Z
+launch-002,Electron | Tiny Bird,Rocket Lab,Electron,"Rocket Lab Launch Complex 1A (Onenui Station, Mahia Peninsula, New Zealand)",2026-11-11T00:00:00Z,Go,2026-11-11T00:00:00Z,2026-11-11T04:00:00Z
+launch-003,Vulcan VC2S | Sample,United Launch Alliance,Vulcan VC2S,"Space Launch Complex 41 (Cape Canaveral SFS, FL, USA)",2026-11-27T12:00:00Z,TBD,2026-11-27T12:00:00Z,2026-11-27T16:00:00Z
+launch-005,Ariane 62 | NewSat,Arianespace,Ariane 62,"Ariane Launch Area 4 (Guiana Space Centre, French Guiana)",2026-12-01T00:00:00Z,TBD,2026-12-01T00:00:00Z,2026-12-01T02:00:00Z
