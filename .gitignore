@@ -14,3 +14,6 @@ venv/
 *.png
 !docs/**/*.png
 .DS_Store
+
+# Generated static site (Pages builds in CI)
+site/_site/

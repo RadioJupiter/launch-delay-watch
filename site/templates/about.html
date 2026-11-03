@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>About &amp; data</h1>
+<p class="lede">
+  Launch Delay Watch is an open-source dataset and site that tracks how rocket
+  launch NET dates move over time.
+</p>
+
+<div class="card">
+  <h2>Attribution</h2>
+  <p>
+    Launch records come from
+    <a href="https://thespacedevs.com/llapi">Launch Library 2</a>
+    by <a href="https://thespacedevs.com/">The Space Devs</a>.
+    Please attribute them when you reuse launch metadata. This site only reads
+    committed CSV snapshots — it does not call the API at build time.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Download the dataset</h2>
+  <ul>
+    <li>
+      {% if snapshot_filename %}
+      <a href="https://raw.githubusercontent.com/RadioJupiter/launch-delay-watch/main/data/snapshots/{{ snapshot_filename }}">
+        Latest snapshot CSV ({{ snapshot_filename }})
+      </a>
+      {% else %}
+      No snapshot file yet.
+      {% endif %}
+    </li>
+    <li>
+      <a href="https://raw.githubusercontent.com/RadioJupiter/launch-delay-watch/main/data/slips.csv">
+        Cumulative slips.csv
+      </a>
+    </li>
+    <li>
+      <a href="https://github.com/RadioJupiter/launch-delay-watch/tree/main/data/snapshots">
+        All snapshots on GitHub
+      </a>
+    </li>
+  </ul>
+  <p class="muted">Latest snapshot in this build: <strong>{{ snapshot_date }}</strong>
+    ({{ launch_count }} launches). Slip history rows: {{ slip_count }}.</p>
+</div>
+
+<div class="card">
+  <h2>CLI &amp; code</h2>
+  <p>
+    Install from the repo and run <code>ldw snapshot</code>, <code>ldw diff</code>,
+    <code>ldw stats</code>, <code>ldw chart</code>.
+    Source: <a href="https://github.com/RadioJupiter/launch-delay-watch">github.com/RadioJupiter/launch-delay-watch</a>
+    (MIT).
+  </p>
+</div>
+
+<div class="card">
+  <h2>Site build</h2>
+  <p>
+    Static HTML is generated with Python + Jinja2 from local CSVs
+    (<code>python site/build.py</code>) and published with GitHub Pages.
+    Generated {{ generated_at }}.
+  </p>
+</div>
+{% endblock %}

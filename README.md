@@ -11,6 +11,19 @@ Every day we freeze the public [no-earlier-than (NET)](https://en.wikipedia.org/
 | **Source** | [Launch Library 2](https://thespacedevs.com/llapi) by [The Space Devs](https://thespacedevs.com/) |
 | **License** | MIT (code); attribute The Space Devs for launch records |
 
+## Website
+
+Public auto-updating site (GitHub Pages):
+
+**https://radiojupiter.github.io/launch-delay-watch/**
+
+Built from the CSVs in `data/` by `site/build.py` (Python + Jinja2). Redeploys on push to `main`, after the daily snapshot workflow, and on a daily schedule. No Launch Library API calls at build time.
+
+```bash
+python site/build.py
+# open site/_site/index.html (use --base-path "" for local root links)
+```
+
 ## Why this exists
 
 Reporters, analysts, and hobbyists can see that launches slip — but there has not been a small, open, machine-readable **history of those slips**. Proprietary schedule tools are closed; one-off scrapes go stale. Launch Delay Watch is deliberately narrow:

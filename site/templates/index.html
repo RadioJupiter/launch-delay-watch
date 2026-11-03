@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "macros.html" import launch_table %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="pill">Open data · rebuilt daily</p>
+    <h1>How far do rocket launches slip?</h1>
+    <p class="lede">
+      Launch Delay Watch freezes the public NET schedule every day, then measures
+      how dates move. Browse upcoming launches, provider and vehicle pages, and
+      Texas-visible pads — all from open snapshots.
+    </p>
+  </div>
+  <div class="stat-grid">
+    <div class="stat"><div class="n">{{ launch_count }}</div><div class="l">Upcoming in latest snapshot</div></div>
+    <div class="stat"><div class="n">{{ snapshot_date }}</div><div class="l">Snapshot date</div></div>
+    <div class="stat"><div class="n">{{ slip_count }}</div><div class="l">Slip history rows</div></div>
+  </div>
+</section>
+
+{# === MONETIZATION: AdSense in-feed slot (placeholder) === #}
+<div class="ad-slot" aria-hidden="true">
+  <!-- AdSense display unit placeholder. Replace with real &lt;ins class="adsbygoogle"&gt; after approval.
+       data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" data-ad-slot="YYYYYYYYYY" -->
+  Ad slot (AdSense) — not active
+</div>
+
+<section>
+  <h2>Latest schedule slips</h2>
+  {% if not has_slip_history %}
+    <div class="note">Not enough history yet — need at least two daily snapshots before slip diffs appear. The first comparison lands after the next daily GitHub Action run.</div>
+  {% else %}
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Mission</th><th>Provider</th><th>Rocket</th><th>Slip (days)</th><th>NET before → after</th></tr>
+      </thead>
+      <tbody>
+      {% for s in recent_slips %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td>{{ s.provider }}</td>
+          <td>{{ s.rocket }}</td>
+          <td class="num {% if s.slip_days > 0 %}slip-pos{% elif s.slip_days < 0 %}slip-neg{% else %}slip-zero{% endif %}">{{ s.slip_display }}</td>
+          <td class="num">{{ s.net_a }} → {{ s.net_b }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No non-empty slip rows yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% endif %}
+</section>
+
+<section>
+  <h2>Next launches</h2>
+  {{ launch_table(upcoming) }}
+  <p class="muted">Showing the next {{ upcoming|length }} of {{ launch_count }} in snapshot {{ snapshot_date }}.</p>
+</section>
+
+<section>
+  <h2>Browse by provider</h2>
+  <div class="list-links">
+  {% for name, items in top_providers %}
+    <a href="{{ base_path }}/providers/{{ slugify(name) }}/">
+      {{ name }}
+      <div class="count">{{ items|length }} upcoming</div>
+    </a>
+  {% endfor %}
+  </div>
+  <p><a href="{{ base_path }}/providers/">All providers →</a></p>
+</section>
+
+{# === MONETIZATION: Amazon affiliate gear ideas (placeholder links) ===
+   When enrolled in Amazon Associates, replace # with tagged product URLs.
+=== #}
+<aside class="affiliate-slot card">
+  <strong>Skywatching gear (affiliate placeholders)</strong>
+  <p class="muted">Add Amazon Associates links here later — binoculars, planisphere, red flashlight.</p>
+  <ul>
+    <li><a href="#">Astronomy binoculars</a> <!-- affiliate --></li>
+    <li><a href="#">Beginner telescope</a> <!-- affiliate --></li>
+    <li><a href="#">Star chart / planisphere</a> <!-- affiliate --></li>
+  </ul>
+</aside>
+{% endblock %}

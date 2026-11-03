@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "macros.html" import launch_table, slip_summary %}
+{% block content %}
+<p class="pill"><a href="{{ base_path }}/providers/">Providers</a></p>
+<h1>{{ provider_name }}</h1>
+<p class="lede">{{ launches|length }} upcoming launch{{ "es" if launches|length != 1 else "" }} in snapshot {{ snapshot_date }}.</p>
+
+<h2>Slip statistics</h2>
+{{ slip_summary(stats) }}
+
+{# AdSense placeholder #}
+<div class="ad-slot" aria-hidden="true">Ad slot (AdSense) — not active</div>
+
+<h2>Upcoming</h2>
+{{ launch_table(launches, show_provider=false) }}
+{% endblock %}

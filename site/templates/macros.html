@@ -1,0 +1,51 @@
+{% macro launch_table(rows, show_provider=true, show_rocket=true) -%}
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Mission</th>
+      {% if show_provider %}<th>Provider</th>{% endif %}
+      {% if show_rocket %}<th>Rocket</th>{% endif %}
+      <th>Pad</th>
+      <th>NET (UTC)</th>
+      <th>Countdown</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for L in rows %}
+    <tr>
+      <td>{{ L.name }}</td>
+      {% if show_provider %}
+      <td><a href="{{ base_path }}/providers/{{ L.provider_slug }}/">{{ L.provider or "—" }}</a></td>
+      {% endif %}
+      {% if show_rocket %}
+      <td><a href="{{ base_path }}/rockets/{{ L.rocket_slug }}/">{{ L.rocket or "—" }}</a></td>
+      {% endif %}
+      <td>{{ L.pad or "—" }}</td>
+      <td class="num">{{ L.net_display }}</td>
+      <td class="num">{{ L.countdown or "—" }}</td>
+      <td><span class="status status-{{ L.status }}">{{ L.status or "—" }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">No launches in this view.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{%- endmacro %}
+
+{% macro slip_summary(stats) -%}
+  {% if not stats or not stats.enough %}
+    <div class="note">Not enough history yet
+      {% if stats %}(n={{ stats.n }}, need ≥ {{ min_slip_samples }}){% endif %}
+      — daily snapshots will fill this in.</div>
+  {% else %}
+    <div class="stat-grid">
+      <div class="stat"><div class="n">{{ stats.n }}</div><div class="l">Matched diffs</div></div>
+      <div class="stat"><div class="n">{{ "%+.2f"|format(stats.mean) }}d</div><div class="l">Mean slip</div></div>
+      <div class="stat"><div class="n">{{ "%+.2f"|format(stats.median) }}d</div><div class="l">Median slip</div></div>
+      <div class="stat"><div class="n">{{ stats.delayed }}</div><div class="l">Delayed moves</div></div>
+    </div>
+  {% endif %}
+{%- endmacro %}

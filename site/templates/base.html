@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ meta_description }}">
+  <link rel="canonical" href="{{ site_base }}/{% if canonical_path %}{{ canonical_path }}{% endif %}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ meta_description }}">
+  <meta property="og:url" content="{{ site_base }}/{% if canonical_path %}{{ canonical_path }}{% endif %}">
+  <meta property="og:site_name" content="Launch Delay Watch">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ page_title }}">
+  <meta name="twitter:description" content="{{ meta_description }}">
+  <link rel="stylesheet" href="{{ base_path }}/static/style.css">
+  {# === MONETIZATION: Google AdSense ===
+     When you have an AdSense publisher ID, uncomment and replace ca-pub-XXXXXXXXXXXXXXXX:
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+          crossorigin="anonymous"></script>
+  === end AdSense head snippet === #}
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap brand-row">
+      <a class="brand" href="{{ base_path }}/">
+        <span class="brand-mark" aria-hidden="true">◈</span>
+        Launch Delay Watch
+      </a>
+      <nav aria-label="Primary">
+        <a href="{{ base_path }}/">Home</a>
+        <a href="{{ base_path }}/providers/">Providers</a>
+        <a href="{{ base_path }}/rockets/">Rockets</a>
+        <a href="{{ base_path }}/texas/">Texas sky</a>
+        <a href="{{ base_path }}/about/">About &amp; data</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  {# === MONETIZATION: newsletter signup placeholder ===
+     Wire this to Buttondown, ConvertKit, Mailchimp, etc. when ready.
+     Do not collect emails until a real form endpoint exists. #}
+  <section class="newsletter wrap" aria-label="Newsletter signup placeholder">
+    <h2>Get weekly slip highlights</h2>
+    <p class="muted">Newsletter coming soon — no signup form yet. Follow the
+      <a href="https://github.com/RadioJupiter/launch-delay-watch">GitHub repo</a> for updates.</p>
+    <!--
+    <form action="YOUR_NEWSLETTER_ENDPOINT" method="post">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required placeholder="you@example.com">
+      <button type="submit">Subscribe</button>
+    </form>
+    -->
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <p>Data from <a href="https://thespacedevs.com/llapi">Launch Library 2</a>
+          by <a href="https://thespacedevs.com/">The Space Devs</a>.
+          Site rebuilt daily from open snapshots.</p>
+        <p class="muted">Snapshot {{ snapshot_date }} · Built {{ generated_at }}</p>
+      </div>
+      <div>
+        <a href="{{ base_path }}/about/">About &amp; downloads</a>
+        <a href="{{ base_path }}/privacy/">Privacy</a>
+        <a href="https://github.com/RadioJupiter/launch-delay-watch">GitHub</a>
+      </div>
+    </div>
+    {# === MONETIZATION: Amazon Associates disclosure placeholder ===
+       When affiliate links are live, show FTC disclosure nearby:
+       As an Amazon Associate I earn from qualifying purchases.
+    === #}
+  </footer>
+</body>
+</html>

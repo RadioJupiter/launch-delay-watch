@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Providers</h1>
+<p class="lede">Launch service providers in the latest snapshot, with slip stats when enough history exists.</p>
+<div class="list-links">
+{% for name in providers %}
+  {% set st = provider_stats.get(name) %}
+  <a href="{{ base_path }}/providers/{{ slugify(name) }}/">
+    {{ name }}
+    <div class="count">
+      {{ by_provider[name]|length }} upcoming
+      {% if st and st.enough %} · mean slip {{ "%+.1f"|format(st.mean) }}d{% elif has_slip_history %} · not enough history yet{% endif %}
+    </div>
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

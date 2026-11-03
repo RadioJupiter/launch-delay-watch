@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros.html" import launch_table %}
+{% block content %}
+<h1>Launches visible from Texas</h1>
+<p class="lede">
+  Starbase / Boca Chica (South Texas) launches are local. Cape Canaveral and Kennedy
+  Space Center flights are often watched from Texas Gulf Coast skies on clear nights —
+  listed here as a convenience, not a visibility guarantee (weather, trajectory, and
+  lighting vary).
+</p>
+
+<h2>Starbase / Boca Chica (TX)</h2>
+{% if texas_launches %}
+  {{ launch_table(texas_launches) }}
+{% else %}
+  <div class="note">No Starbase / Texas-pad launches in the latest snapshot.</div>
+{% endif %}
+
+<h2>Cape Canaveral &amp; Kennedy Space Center</h2>
+<p class="muted">Florida east-coast pads that Texas observers often track.</p>
+{% if cape_launches %}
+  {{ launch_table(cape_launches) }}
+{% else %}
+  <div class="note">No Cape / KSC launches in the latest snapshot.</div>
+{% endif %}
+
+<aside class="affiliate-slot card">
+  <strong>Watching from Texas (affiliate placeholders)</strong>
+  <p class="muted">Swap in Amazon Associates links when ready.</p>
+  <ul>
+    <li><a href="#">Binoculars for launch watching</a></li>
+    <li><a href="#">Tripod + phone adapter</a></li>
+  </ul>
+</aside>
+{% endblock %}
