@@ -15,11 +15,7 @@
   <meta name="twitter:title" content="{{ page_title }}">
   <meta name="twitter:description" content="{{ meta_description }}">
   <link rel="stylesheet" href="{{ base_path }}/static/style.css">
-  {# === MONETIZATION: Google AdSense ===
-     When you have an AdSense publisher ID, uncomment and replace ca-pub-XXXXXXXXXXXXXXXX:
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
-          crossorigin="anonymous"></script>
-  === end AdSense head snippet === #}
+  {# AdSense head script: restore here #}
   <script data-goatcounter="https://radiojupitergithubio.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -44,21 +40,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  {# === MONETIZATION: newsletter signup placeholder ===
-     Wire this to Buttondown, ConvertKit, Mailchimp, etc. when ready.
-     Do not collect emails until a real form endpoint exists. #}
-  <section class="newsletter wrap" aria-label="Newsletter signup placeholder">
-    <h2>Get weekly slip highlights</h2>
-    <p class="muted">Newsletter coming soon — no signup form yet. Follow the
-      <a href="https://github.com/RadioJupiter/launch-delay-watch">GitHub repo</a> for updates.</p>
-    <!--
-    <form action="YOUR_NEWSLETTER_ENDPOINT" method="post">
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required placeholder="you@example.com">
-      <button type="submit">Subscribe</button>
-    </form>
-    -->
-  </section>
+  {# Newsletter signup: restore here #}
 
   <footer class="site-footer">
     <div class="wrap footer-grid">
@@ -74,10 +56,7 @@
         <a href="https://github.com/RadioJupiter/launch-delay-watch">GitHub</a>
       </div>
     </div>
-    {# === MONETIZATION: Amazon Associates disclosure placeholder ===
-       When affiliate links are live, show FTC disclosure nearby:
-       As an Amazon Associate I earn from qualifying purchases.
-    === #}
+    {# Amazon Associates FTC disclosure: restore here #}
   </footer>
 </body>
 </html>

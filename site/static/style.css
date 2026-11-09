@@ -139,13 +139,6 @@ tbody tr:hover { background: rgba(94, 200, 255, 0.05); }
 .list-links a:hover { border-color: var(--accent); }
 .list-links .count { color: var(--muted); font-size: .85rem; }
 
-.newsletter {
-  margin: 0 auto 2rem; padding: 1.25rem 1.35rem;
-  background: linear-gradient(135deg, #15203a, #1a1430);
-  border: 1px solid var(--line); border-radius: var(--radius);
-}
-.newsletter h2 { margin-top: 0; }
-
 .site-footer {
   border-top: 1px solid var(--line); padding: 1.5rem 0 2.5rem;
   color: var(--muted); font-size: .9rem;
@@ -154,12 +147,6 @@ tbody tr:hover { background: rgba(94, 200, 255, 0.05); }
   display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between;
 }
 .footer-grid a { margin-right: 1rem; }
-
-/* Ad / affiliate placeholder slots — keep visually quiet until wired */
-.ad-slot, .affiliate-slot {
-  border: 1px dashed #334466; color: #6b7c99; font-size: .8rem;
-  padding: .75rem; border-radius: 8px; text-align: center; margin: 1rem 0;
-}
 
 @media (max-width: 600px) {
   th:nth-child(4), td:nth-child(4) { display: none; } /* hide pad on tiny screens in some tables */
