@@ -44,6 +44,17 @@ CAPE_PAD_KEYWORDS = (
 MIN_SLIP_SAMPLES = 3  # below this, show "not enough history yet"
 
 
+def format_snapshot_date(iso_date: str) -> str:
+    """Human date for tight hero stats, e.g. Nov 8, 2026."""
+    if not iso_date or iso_date == "none":
+        return iso_date or "—"
+    try:
+        dt = datetime.strptime(iso_date, "%Y-%m-%d")
+    except ValueError:
+        return iso_date
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year}"
+
+
 def slugify(text: str) -> str:
     """URL-safe slug from a provider/rocket name."""
     s = text.strip().lower()
@@ -244,22 +255,38 @@ def _short_label(text: str, max_len: int = 42) -> str:
     return t[: max_len - 1].rstrip() + "…"
 
 
+def _format_slip_value(days: float) -> str:
+    """One-decimal slip with unit, e.g. -19.8 d or +0.9 d."""
+    return f"{days:+.1f} d"
+
+
 def write_slip_chart_svg(rows: list[dict[str, Any]], dest: Path) -> tuple[int, str]:
-    """Dark-theme horizontal bar chart of largest NET slips. Returns (height, alt)."""
+    """Dark-theme horizontal bar chart of largest NET slips. Returns (height, alt).
+
+    Layout (bars never enter label/value gutters):
+      [ mission labels | plot with zero axis | value column ]
+    Values always sit in the right column so they cannot collide with names.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     width = 960
-    left, right, top = 280, 72, 28
-    row_h = 36
-    bottom = 36
+    # Fixed gutters: mission labels left, values right; plot stays between them.
+    label_gutter = 250
+    value_gutter = 88
+    gutter_gap = 14
+    top = 20
+    row_h = 38
+    bottom = 34
+    plot_left = label_gutter + gutter_gap
+    plot_right = width - value_gutter - gutter_gap
+    plot_w = plot_right - plot_left
     height = top + max(len(rows), 1) * row_h + bottom
-    plot_w = width - left - right
 
     if not rows:
         svg = (
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} 120" '
             f'role="img" aria-label="No slip data yet">'
             f'<rect width="100%" height="100%" fill="#141e33"/>'
-            f'<text x="{width/2}" y="64" text-anchor="middle" fill="#9aabc8" '
+            f'<text x="{width / 2}" y="64" text-anchor="middle" fill="#9aabc8" '
             f'font-family="Segoe UI, system-ui, sans-serif" font-size="16">'
             f"No notable NET slips yet</text></svg>\n"
         )
@@ -268,69 +295,59 @@ def write_slip_chart_svg(rows: list[dict[str, Any]], dest: Path) -> tuple[int, s
 
     vals = [float(r["slip_days"]) for r in rows]
     max_abs = max(abs(v) for v in vals) or 1.0
-    # symmetric scale so zero sits in the middle
-    scale = plot_w / (2 * max_abs)
-    zero_x = left + plot_w / 2
+    # Round scale ceiling to a clean 0.5 step so tick labels stay tidy
+    tick_max = max(0.5, round(max_abs * 2) / 2)
+    scale = plot_w / (2 * tick_max)
+    zero_x = plot_left + plot_w / 2
+    mono = "ui-monospace, SF Mono, Menlo, Consolas, monospace"
+    sans = "Segoe UI, system-ui, sans-serif"
+    bar_h = 18
 
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
         f'role="img" width="{width}" height="{height}">',
         '<rect width="100%" height="100%" fill="#141e33"/>',
-        f'<line x1="{zero_x}" y1="{top - 8}" x2="{zero_x}" y2="{height - bottom + 8}" '
+        # Plot background strip (visual separation from gutters)
+        f'<rect x="{plot_left}" y="{top - 10}" width="{plot_w}" '
+        f'height="{height - bottom - top + 18}" rx="8" fill="#10182a"/>',
+        f'<line x1="{zero_x}" y1="{top - 6}" x2="{zero_x}" y2="{height - bottom + 6}" '
         f'stroke="#334466" stroke-width="1"/>',
-        f'<text x="{zero_x}" y="{height - 12}" text-anchor="middle" fill="#9aabc8" '
-        f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" font-size="11">'
-        f"0 days</text>",
+        f'<text x="{zero_x}" y="{height - 10}" text-anchor="middle" fill="#9aabc8" '
+        f'font-family="{mono}" font-size="11">0</text>',
+        f'<text x="{plot_left}" y="{height - 10}" text-anchor="start" fill="#9aabc8" '
+        f'font-family="{mono}" font-size="11">−{tick_max:.1f} d</text>',
+        f'<text x="{plot_right}" y="{height - 10}" text-anchor="end" fill="#9aabc8" '
+        f'font-family="{mono}" font-size="11">+{tick_max:.1f} d</text>',
     ]
-
-    # axis ticks at ±max
-    for sign, anchor in ((-1, "start"), (1, "end")):
-        label_x = left + 8 if sign < 0 else width - 8
-        parts.append(
-            f'<text x="{label_x}" y="{height - 12}" text-anchor="{anchor}" fill="#9aabc8" '
-            f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" font-size="11">'
-            f'{"−" if sign < 0 else "+"}{max_abs:.1f}d</text>'
-        )
 
     for i, r in enumerate(rows):
         v = float(r["slip_days"])
-        y = top + i * row_h
-        cy = y + row_h / 2
-        label = _short_label(str(r.get("name") or "—"))
+        cy = top + i * row_h + row_h / 2
+        label = _short_label(str(r.get("name") or "—"), max_len=36)
         bar_w = abs(v) * scale
+        color = "#f87171" if v >= 0 else "#34d399"
         if v >= 0:
             bx = zero_x
-            color = "#f87171"
         else:
             bx = zero_x - bar_w
-            color = "#34d399"
-        bar_h = 18
+
+        # Mission label — right-aligned in the left gutter only
         parts.append(
-            f'<text x="{left - 12}" y="{cy + 4}" text-anchor="end" fill="#e8eefc" '
-            f'font-family="Segoe UI, system-ui, sans-serif" font-size="13">'
-            f'{xml_escape(label)}</text>'
+            f'<text x="{label_gutter}" y="{cy + 4}" text-anchor="end" fill="#e8eefc" '
+            f'font-family="{sans}" font-size="13">{xml_escape(label)}</text>'
         )
+        # Bar stays strictly inside the plot strip
         parts.append(
-            f'<rect x="{bx:.1f}" y="{cy - bar_h/2:.1f}" width="{max(bar_w, 1):.1f}" '
+            f'<rect x="{bx:.1f}" y="{cy - bar_h / 2:.1f}" width="{max(bar_w, 1.5):.1f}" '
             f'height="{bar_h}" rx="4" fill="{color}"/>'
         )
-        val_x = bx + bar_w + 8 if v >= 0 else bx - 8
-        anchor = "start" if v >= 0 else "end"
-        # Keep value label inside plot when bar is huge
-        if v >= 0 and val_x > width - right + 40:
-            val_x = bx + bar_w - 8
-            anchor = "end"
-            fill = "#070b14"
-        elif v < 0 and val_x < left - 40:
-            val_x = bx + 8
-            anchor = "start"
-            fill = "#070b14"
-        else:
-            fill = "#e8eefc"
+        # Value always in the right gutter (never overlaps mission or bar)
+        val = _format_slip_value(v)
+        val_color = "#f87171" if v > 0 else "#34d399" if v < 0 else "#9aabc8"
         parts.append(
-            f'<text x="{val_x:.1f}" y="{cy + 4}" text-anchor="{anchor}" fill="{fill}" '
-            f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" '
-            f'font-size="12" font-weight="600">{v:+.2f}</text>'
+            f'<text x="{width - 12}" y="{cy + 4}" text-anchor="end" fill="{val_color}" '
+            f'font-family="{mono}" font-size="12" font-weight="600">'
+            f"{xml_escape(val)}</text>"
         )
 
     parts.append("</svg>")
@@ -343,6 +360,7 @@ def write_slip_chart_svg(rows: list[dict[str, Any]], dest: Path) -> tuple[int, s
         f"Positive values are delays; negative values mean the date moved earlier."
     )
     return height, alt
+
 
 
 def make_env(base_path: str) -> Environment:
@@ -421,6 +439,7 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
     cape = [L for L in launches if L["is_cape"]]
 
     snapshot_date = snap_path.stem if snap_path else "none"
+    snapshot_date_display = format_snapshot_date(snapshot_date)
     generated_at = now.strftime("%Y-%m-%d %H:%M UTC")
 
     if dest.exists():
@@ -431,6 +450,7 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
     common = {
         "generated_at": generated_at,
         "snapshot_date": snapshot_date,
+        "snapshot_date_display": snapshot_date_display,
         "launch_count": len(launches),
         "slip_count": len(slips),
         "has_slip_history": len(slips) > 0,
