@@ -151,3 +151,28 @@ tbody tr:hover { background: rgba(94, 200, 255, 0.05); }
 @media (max-width: 600px) {
   th:nth-child(4), td:nth-child(4) { display: none; } /* hide pad on tiny screens in some tables */
 }
+
+.chart-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1.75rem;
+}
+.chart-panel img,
+.chart-panel svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+.chart-panel figcaption {
+  color: var(--muted);
+  font-size: .9rem;
+  margin-top: .7rem;
+  line-height: 1.45;
+}
+.section-more { margin: .75rem 0 0; }
+.section-more a { font-weight: 600; text-decoration: none; }
+.section-more a:hover { text-decoration: underline; }
+

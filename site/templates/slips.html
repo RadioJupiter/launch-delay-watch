@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="pill"><a href="{{ base_path }}/">Home</a></p>
+<h1>Schedule slips</h1>
+<p class="lede">
+  Day-to-day NET date moves recorded so far
+  ({% if slips %}{{ slips|length }} notable{% else %}none yet{% endif %};
+  + delayed, − pulled earlier).
+</p>
+{% if not slips %}
+  <div class="note">No notable slips yet — daily snapshots will fill this in as dates move.</div>
+{% else %}
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Compared</th>
+        <th>Mission</th>
+        <th>Provider</th>
+        <th>Rocket</th>
+        <th>Slip (days)</th>
+        <th>NET before → after</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for s in slips %}
+      <tr>
+        <td class="num">{{ s.snapshot_a }} → {{ s.snapshot_b }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.provider }}</td>
+        <td>{{ s.rocket }}</td>
+        <td class="num {% if s.slip_days > 0 %}slip-pos{% elif s.slip_days < 0 %}slip-neg{% else %}slip-zero{% endif %}">{{ s.slip_display }}</td>
+        <td class="num">{{ s.net_a }} → {{ s.net_b }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endif %}
+{% endblock %}

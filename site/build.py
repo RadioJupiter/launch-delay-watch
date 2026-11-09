@@ -171,25 +171,178 @@ def slip_stats(slips: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any
     return stats
 
 
-def latest_slips_for_home(slips: list[dict[str, Any]], limit: int = 15) -> list[dict[str, Any]]:
-    """Most recent snapshot_b slips, delayed first."""
-    if not slips:
-        return []
-    # Prefer rows from the newest snapshot_b
-    by_b: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in slips:
-        by_b[str(row.get("snapshot_b") or "")].append(row)
-    if not by_b:
-        return []
-    newest = sorted(by_b.keys())[-1]
-    rows = [r for r in by_b[newest] if r.get("slip_days") is not None]
-    rows.sort(key=lambda r: float(r["slip_days"]), reverse=True)
-    out = []
-    for r in rows[:limit]:
+NOTABLE_SLIP_ABS = 0.01  # ignore tiny float noise in slip tables/charts
+HOME_UPCOMING_LIMIT = 12
+HOME_SLIPS_LIMIT = 10
+CHART_TOP_N = 8
+
+
+def _format_slip_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for r in rows:
         item = dict(r)
         item["slip_display"] = f"{float(r['slip_days']):+.2f}"
         out.append(item)
     return out
+
+
+def notable_slips(
+    slips: list[dict[str, Any]], limit: int | None = None
+) -> list[dict[str, Any]]:
+    """Non-trivial NET moves, newest snapshot_b first, then largest |slip|."""
+    rows = [
+        r
+        for r in slips
+        if r.get("slip_days") is not None
+        and abs(float(r["slip_days"])) >= NOTABLE_SLIP_ABS
+    ]
+    rows.sort(
+        key=lambda r: (str(r.get("snapshot_b") or ""), abs(float(r["slip_days"]))),
+        reverse=True,
+    )
+    if limit is not None:
+        rows = rows[:limit]
+    return _format_slip_rows(rows)
+
+
+def latest_slips_for_home(
+    slips: list[dict[str, Any]], limit: int = HOME_SLIPS_LIMIT
+) -> list[dict[str, Any]]:
+    """Home table: notable slips only, capped for scannability."""
+    return notable_slips(slips, limit=limit)
+
+
+def chart_slip_rows(
+    slips: list[dict[str, Any]], top_n: int = CHART_TOP_N
+) -> list[dict[str, Any]]:
+    """Largest |slip| missions for the home chart."""
+    rows = [
+        r
+        for r in slips
+        if r.get("slip_days") is not None
+        and abs(float(r["slip_days"])) >= NOTABLE_SLIP_ABS
+    ]
+    rows.sort(key=lambda r: abs(float(r["slip_days"])), reverse=True)
+    # Prefer unique mission names (keep largest |slip| per name)
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for r in rows:
+        name = (r.get("name") or "").strip() or "(unknown)"
+        if name in seen:
+            continue
+        seen.add(name)
+        unique.append(r)
+        if len(unique) >= top_n:
+            break
+    return _format_slip_rows(unique)
+
+
+def _short_label(text: str, max_len: int = 42) -> str:
+    t = re.sub(r"\s+", " ", (text or "").strip())
+    if len(t) <= max_len:
+        return t
+    return t[: max_len - 1].rstrip() + "…"
+
+
+def write_slip_chart_svg(rows: list[dict[str, Any]], dest: Path) -> tuple[int, str]:
+    """Dark-theme horizontal bar chart of largest NET slips. Returns (height, alt)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    width = 960
+    left, right, top = 280, 72, 28
+    row_h = 36
+    bottom = 36
+    height = top + max(len(rows), 1) * row_h + bottom
+    plot_w = width - left - right
+
+    if not rows:
+        svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} 120" '
+            f'role="img" aria-label="No slip data yet">'
+            f'<rect width="100%" height="100%" fill="#141e33"/>'
+            f'<text x="{width/2}" y="64" text-anchor="middle" fill="#9aabc8" '
+            f'font-family="Segoe UI, system-ui, sans-serif" font-size="16">'
+            f"No notable NET slips yet</text></svg>\n"
+        )
+        dest.write_text(svg, encoding="utf-8")
+        return 120, "No notable NET slips yet"
+
+    vals = [float(r["slip_days"]) for r in rows]
+    max_abs = max(abs(v) for v in vals) or 1.0
+    # symmetric scale so zero sits in the middle
+    scale = plot_w / (2 * max_abs)
+    zero_x = left + plot_w / 2
+
+    parts: list[str] = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+        f'role="img" width="{width}" height="{height}">',
+        '<rect width="100%" height="100%" fill="#141e33"/>',
+        f'<line x1="{zero_x}" y1="{top - 8}" x2="{zero_x}" y2="{height - bottom + 8}" '
+        f'stroke="#334466" stroke-width="1"/>',
+        f'<text x="{zero_x}" y="{height - 12}" text-anchor="middle" fill="#9aabc8" '
+        f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" font-size="11">'
+        f"0 days</text>",
+    ]
+
+    # axis ticks at ±max
+    for sign, anchor in ((-1, "start"), (1, "end")):
+        label_x = left + 8 if sign < 0 else width - 8
+        parts.append(
+            f'<text x="{label_x}" y="{height - 12}" text-anchor="{anchor}" fill="#9aabc8" '
+            f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" font-size="11">'
+            f'{"−" if sign < 0 else "+"}{max_abs:.1f}d</text>'
+        )
+
+    for i, r in enumerate(rows):
+        v = float(r["slip_days"])
+        y = top + i * row_h
+        cy = y + row_h / 2
+        label = _short_label(str(r.get("name") or "—"))
+        bar_w = abs(v) * scale
+        if v >= 0:
+            bx = zero_x
+            color = "#f87171"
+        else:
+            bx = zero_x - bar_w
+            color = "#34d399"
+        bar_h = 18
+        parts.append(
+            f'<text x="{left - 12}" y="{cy + 4}" text-anchor="end" fill="#e8eefc" '
+            f'font-family="Segoe UI, system-ui, sans-serif" font-size="13">'
+            f'{xml_escape(label)}</text>'
+        )
+        parts.append(
+            f'<rect x="{bx:.1f}" y="{cy - bar_h/2:.1f}" width="{max(bar_w, 1):.1f}" '
+            f'height="{bar_h}" rx="4" fill="{color}"/>'
+        )
+        val_x = bx + bar_w + 8 if v >= 0 else bx - 8
+        anchor = "start" if v >= 0 else "end"
+        # Keep value label inside plot when bar is huge
+        if v >= 0 and val_x > width - right + 40:
+            val_x = bx + bar_w - 8
+            anchor = "end"
+            fill = "#070b14"
+        elif v < 0 and val_x < left - 40:
+            val_x = bx + 8
+            anchor = "start"
+            fill = "#070b14"
+        else:
+            fill = "#e8eefc"
+        parts.append(
+            f'<text x="{val_x:.1f}" y="{cy + 4}" text-anchor="{anchor}" fill="{fill}" '
+            f'font-family="ui-monospace, SF Mono, Menlo, Consolas, monospace" '
+            f'font-size="12" font-weight="600">{v:+.2f}</text>'
+        )
+
+    parts.append("</svg>")
+    dest.write_text("\n".join(parts) + "\n", encoding="utf-8")
+
+    names = ", ".join(_short_label(str(r.get("name") or ""), 28) for r in rows[:4])
+    alt = (
+        f"Horizontal bar chart of the largest NET schedule slips in days"
+        f" ({names}{'…' if len(rows) > 4 else ''}). "
+        f"Positive values are delays; negative values mean the date moved earlier."
+    )
+    return height, alt
 
 
 def make_env(base_path: str) -> Environment:
@@ -253,7 +406,9 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
     slips = read_slips()
     provider_stats = slip_stats(slips, "provider")
     rocket_stats = slip_stats(slips, "rocket")
-    recent_slips = latest_slips_for_home(slips)
+    recent_slips = latest_slips_for_home(slips, limit=HOME_SLIPS_LIMIT)
+    all_notable_slips = notable_slips(slips)
+    chart_rows = chart_slip_rows(slips, top_n=CHART_TOP_N)
 
     # Index maps for detail pages
     by_provider: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -284,12 +439,27 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
 
     sitemap_paths: list[str] = [
         "",
+        "upcoming/",
+        "slips/",
         "providers/",
         "rockets/",
         "texas/",
         "about/",
         "privacy/",
     ]
+
+    # Static assets first so the chart lands beside CSS
+    copy_static(dest)
+    chart_height = 120
+    chart_alt = "No notable NET slips yet"
+    show_slip_chart = bool(chart_rows)
+    if show_slip_chart:
+        chart_height, chart_alt = write_slip_chart_svg(
+            chart_rows, dest / "static" / "slip-chart.svg"
+        )
+    chart_caption = (
+        "Largest day-to-day NET moves so far (days; + delayed, − pulled earlier)."
+    )
 
     # Home
     home = env.get_template("index.html").render(
@@ -300,15 +470,45 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
             "NET dates slip, by provider and vehicle. Open dataset from Launch Library 2."
         ),
         canonical_path="",
-        upcoming=launches[:40],
+        upcoming=launches[:HOME_UPCOMING_LIMIT],
         recent_slips=recent_slips,
         top_providers=sorted(
             by_provider.items(), key=lambda kv: len(kv[1]), reverse=True
         )[:12],
         provider_stats=provider_stats,
         rocket_stats=rocket_stats,
+        show_slip_chart=show_slip_chart,
+        chart_height=chart_height,
+        chart_alt=chart_alt,
+        chart_caption=chart_caption,
     )
     write_page(dest / "index.html", home)
+
+    # Full upcoming list
+    upcoming_page = env.get_template("upcoming.html").render(
+        **common,
+        page_title="Upcoming launches — Launch Delay Watch",
+        meta_description=(
+            f"Full list of {len(launches)} upcoming rocket launches from the "
+            f"{snapshot_date} open snapshot."
+        ),
+        canonical_path="upcoming/",
+        launches=launches,
+    )
+    write_page(dest / "upcoming" / "index.html", upcoming_page)
+
+    # Notable slips history
+    slips_page = env.get_template("slips.html").render(
+        **common,
+        page_title="Schedule slips — Launch Delay Watch",
+        meta_description=(
+            "Day-to-day NET date slips for upcoming rocket launches, "
+            "from open daily snapshots."
+        ),
+        canonical_path="slips/",
+        slips=all_notable_slips,
+    )
+    write_page(dest / "slips" / "index.html", slips_page)
 
     # Providers index + detail
     providers_sorted = sorted(by_provider.keys(), key=str.lower)
@@ -402,7 +602,6 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
     )
     write_page(dest / "privacy" / "index.html", privacy)
 
-    copy_static(dest)
     build_sitemap(sitemap_paths, dest / "sitemap.xml")
     build_robots(dest / "robots.txt")
 

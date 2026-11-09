@@ -18,12 +18,27 @@
   </div>
 </section>
 
+{% if show_slip_chart %}
+<figure class="chart-panel">
+  <img
+    src="{{ base_path }}/static/slip-chart.svg"
+    width="960"
+    height="{{ chart_height }}"
+    alt="{{ chart_alt }}"
+    loading="eager"
+  >
+  <figcaption>{{ chart_caption }}</figcaption>
+</figure>
+{% endif %}
+
 {# AdSense slot: restore here #}
 
 <section>
   <h2>Latest schedule slips</h2>
   {% if not has_slip_history %}
     <div class="note">Not enough history yet — need at least two daily snapshots before slip diffs appear. The first comparison lands after the next daily GitHub Action run.</div>
+  {% elif not recent_slips %}
+    <div class="note">Snapshots are flowing, but no notable day-to-day NET moves have been recorded yet.</div>
   {% else %}
     <div class="table-wrap">
     <table>
@@ -39,12 +54,11 @@
           <td class="num {% if s.slip_days > 0 %}slip-pos{% elif s.slip_days < 0 %}slip-neg{% else %}slip-zero{% endif %}">{{ s.slip_display }}</td>
           <td class="num">{{ s.net_a }} → {{ s.net_b }}</td>
         </tr>
-      {% else %}
-        <tr><td colspan="5">No non-empty slip rows yet.</td></tr>
       {% endfor %}
       </tbody>
     </table>
     </div>
+    <p class="section-more"><a href="{{ base_path }}/slips/">See all schedule slips →</a></p>
   {% endif %}
 </section>
 
@@ -52,6 +66,7 @@
   <h2>Next launches</h2>
   {{ launch_table(upcoming) }}
   <p class="muted">Showing the next {{ upcoming|length }} of {{ launch_count }} in snapshot {{ snapshot_date }}.</p>
+  <p class="section-more"><a href="{{ base_path }}/upcoming/">See all upcoming launches →</a></p>
 </section>
 
 <section>

@@ -25,6 +25,8 @@ def test_build_writes_core_pages(tmp_path: Path):
     assert (out / "texas" / "index.html").is_file()
     assert (out / "about" / "index.html").is_file()
     assert (out / "privacy" / "index.html").is_file()
+    assert (out / "upcoming" / "index.html").is_file()
+    assert (out / "slips" / "index.html").is_file()
     assert (out / "sitemap.xml").is_file()
     assert (out / "robots.txt").is_file()
     assert (out / "static" / "style.css").is_file()
@@ -36,6 +38,14 @@ def test_build_writes_core_pages(tmp_path: Path):
     assert "Launch Delay Watch" in html
     assert "not enough history yet" in html.lower() or summary["slip_count"] > 0
     assert "The Space Devs" in (out / "about" / "index.html").read_text(encoding="utf-8")
+    assert "See all upcoming launches" in html
+    sitemap = (out / "sitemap.xml").read_text(encoding="utf-8")
+    assert "upcoming/" in sitemap
+    assert "slips/" in sitemap
+    if "slip-chart.svg" in html:
+        chart = out / "static" / "slip-chart.svg"
+        assert chart.is_file()
+        assert chart.read_text(encoding="utf-8").lstrip().startswith("<svg")
     robots = (out / "robots.txt").read_text(encoding="utf-8")
     assert "Sitemap:" in robots
     # Texas page mentions Starbase or Cape

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "macros.html" import launch_table %}
+{% block content %}
+<p class="pill"><a href="{{ base_path }}/">Home</a></p>
+<h1>Upcoming launches</h1>
+<p class="lede">
+  Full NET schedule from snapshot {{ snapshot_date }}
+  ({{ launch_count }} mission{{ "s" if launch_count != 1 else "" }}).
+</p>
+{{ launch_table(launches) }}
+{% endblock %}
