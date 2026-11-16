@@ -255,6 +255,7 @@ def headline_numbers(
         "launches_slipped": int(later["id"].nunique()),
         "delay_days_total": float(later["slip_days"].sum()),
         "per_launch": per,
+        "slip_rows": later.sort_values(["snapshot_b", "name"]),
         "precision_changes": pc,
     }
 
@@ -288,6 +289,19 @@ def format_headline(h: dict) -> str:
             f"  {r.name} | {r.pad} | slips={r.slips} | net change {r.net_change_days:+.2f} d "
             f"| {r.first_net} -> {r.last_net} | last status {r.last_status}"
         )
+    steps = h.get("slip_rows")
+    if steps is not None and not steps.empty:
+        lines += ["", "Slips by pad:"]
+        by_pad = steps.groupby("pad")["slip_days"].agg(["count", "sum"])
+        for pad, row in by_pad.sort_values("count", ascending=False).iterrows():
+            lines.append(f"  {pad}: {int(row['count'])} slips, {row['sum']:.1f} days")
+        lines += ["", "Each slip (snapshot pair, launch, size):"]
+        for r in steps.itertuples(index=False):
+            minutes = int(round(r.slip_days * 24 * 60))
+            lines.append(
+                f"  {r.snapshot_a} -> {r.snapshot_b} {r.name}: +{minutes // 60} h "
+                f"{minutes % 60:02d} min ({r.net_a} -> {r.net_b})"
+            )
     lines += ["", "Precision changes (not counted as slips):"]
     for r in h["precision_changes"].itertuples(index=False):
         lines.append(
