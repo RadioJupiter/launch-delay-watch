@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from .paths import SLIPS_PATH, SNAPSHOT_DIR
+from .precision import precision_flag, resolve_class
 
 SLIP_COLUMNS = [
     "id",
@@ -21,6 +22,9 @@ SLIP_COLUMNS = [
     "slip_days",
     "status_a",
     "status_b",
+    "precision_a",
+    "precision_b",
+    "precision_flag",
 ]
 
 
@@ -28,10 +32,24 @@ def _read_snapshot(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, dtype=str).fillna("")
     if "id" not in df.columns:
         raise ValueError(f"Snapshot missing id column: {path}")
-    for col in ("name", "provider", "rocket", "pad", "net", "status"):
+    for col in (
+        "name",
+        "provider",
+        "rocket",
+        "pad",
+        "net",
+        "status",
+        "window_start",
+        "window_end",
+        "net_precision",
+    ):
         if col not in df.columns:
             df[col] = ""
     df["net_dt"] = pd.to_datetime(df["net"], utc=True, errors="coerce")
+    df["precision"] = [
+        resolve_class(r.net, r.window_start, r.window_end, r.net_precision)[0]
+        for r in df.itertuples(index=False)
+    ]
     return df
 
 
@@ -40,11 +58,19 @@ def compare_snapshots(path_a: Path, path_b: Path) -> pd.DataFrame:
 
     Positive ``slip_days`` means the NET moved later (delay). Launches present
     in only one file are dropped (they usually flew or were newly announced).
+
+    ``precision_a``/``precision_b`` classify each NET as ``timed``, ``day`` or
+    ``coarse`` (see :mod:`launch_delay_watch.precision`), and ``precision_flag`` is
+    ``ok`` only when both NETs are timed. Rows flagged ``precision_change`` or
+    ``low_precision`` are excluded from slip statistics by default, because a
+    month placeholder (e.g. ``2026-11-30T00:00:00Z``) being set or replaced is a
+    change in what is known, not a schedule slip.
     """
     a = _read_snapshot(path_a)
     b = _read_snapshot(path_b)
 
-    left = a[["id", "name", "provider", "rocket", "pad", "net", "status", "net_dt"]].rename(
+    keep = ["id", "name", "provider", "rocket", "pad", "net", "status", "net_dt", "precision"]
+    left = a[keep].rename(
         columns={
             "name": "name_a",
             "provider": "provider_a",
@@ -53,9 +79,10 @@ def compare_snapshots(path_a: Path, path_b: Path) -> pd.DataFrame:
             "net": "net_a",
             "status": "status_a",
             "net_dt": "net_dt_a",
+            "precision": "precision_a",
         }
     )
-    right = b[["id", "name", "provider", "rocket", "pad", "net", "status", "net_dt"]].rename(
+    right = b[keep].rename(
         columns={
             "name": "name_b",
             "provider": "provider_b",
@@ -64,6 +91,7 @@ def compare_snapshots(path_a: Path, path_b: Path) -> pd.DataFrame:
             "net": "net_b",
             "status": "status_b",
             "net_dt": "net_dt_b",
+            "precision": "precision_b",
         }
     )
     merged = left.merge(right, on="id", how="inner")
@@ -87,6 +115,12 @@ def compare_snapshots(path_a: Path, path_b: Path) -> pd.DataFrame:
             "slip_days": (merged["net_dt_b"] - merged["net_dt_a"]).dt.total_seconds() / 86400.0,
             "status_a": merged["status_a"],
             "status_b": merged["status_b"],
+            "precision_a": merged["precision_a"],
+            "precision_b": merged["precision_b"],
+            "precision_flag": [
+                precision_flag(pa, pb)
+                for pa, pb in zip(merged["precision_a"], merged["precision_b"])
+            ],
         }
     )
     return out.sort_values("slip_days", ascending=False, na_position="last").reset_index(drop=True)
@@ -142,3 +176,26 @@ def update_slips_history(
     ).reset_index(drop=True)
     combined.to_csv(dest, index=False)
     return delta
+
+
+def rebuild_slips_history(
+    slips_path: Path | None = None,
+    snapshot_dir: Path | None = None,
+) -> pd.DataFrame:
+    """Recompute slips.csv from scratch by diffing every consecutive snapshot pair.
+
+    Deterministic: the result depends only on the committed snapshot CSVs.
+    """
+    snaps = list_snapshots(snapshot_dir)
+    frames = [compare_snapshots(a, b) for a, b in zip(snaps, snaps[1:])]
+    if frames:
+        combined = pd.concat([f[SLIP_COLUMNS] for f in frames], ignore_index=True)
+    else:
+        combined = pd.DataFrame(columns=SLIP_COLUMNS)
+    combined = combined.sort_values(
+        ["snapshot_b", "slip_days"], ascending=[True, False], na_position="last"
+    ).reset_index(drop=True)
+    dest = slips_path or SLIPS_PATH
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    combined.to_csv(dest, index=False)
+    return combined

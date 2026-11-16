@@ -26,6 +26,7 @@ SNAPSHOT_COLUMNS = [
     "status",
     "window_start",
     "window_end",
+    "net_precision",
 ]
 
 
@@ -61,6 +62,9 @@ def normalize_launch(item: dict[str, Any]) -> dict[str, str]:
         or _nested_name(item, "status", "name"),
         "window_start": str(item.get("window_start") or ""),
         "window_end": str(item.get("window_end") or ""),
+        # LL2 says how precise the NET is (Second ... Day, Month, Quarter, Year).
+        # Month/day placeholders must not be read as real slips; see precision.py.
+        "net_precision": _nested_name(item, "net_precision", "name"),
     }
 
 
