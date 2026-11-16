@@ -6,7 +6,7 @@
 
 **Open dataset + Python library/CLI that tracks how far rocket launch NET dates slip** — by vehicle, provider, and pad.
 
-Every day we freeze the public [no-earlier-than (NET)](https://en.wikipedia.org/wiki/NET_(date)) schedule for the next ~100 upcoming launches. Diffing consecutive snapshots measures schedule pressure: how often, and by how many days, launches move later. It is built only from public data and is meant as an observational record, not an official schedule.
+Every day we freeze the public NET ("no earlier than", the earliest time a launch is currently targeted) schedule for the next ~100 upcoming launches. Diffing consecutive snapshots measures schedule pressure: how often, and by how many days, launches move later. It is built only from public data and is meant as an observational record, not an official schedule.
 
 | | |
 |---|---|
