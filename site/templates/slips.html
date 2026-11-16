@@ -3,9 +3,10 @@
 <p class="pill"><a href="{{ base_path }}/">Home</a></p>
 <h1>Schedule slips</h1>
 <p class="lede">
-  Day-to-day NET date moves recorded so far
-  ({% if slips %}{{ slips|length }} notable{% else %}none yet{% endif %};
-  + delayed, − pulled earlier).
+  Day-over-day NET moves of at least 1 hour
+  ({% if slips %}{{ slips|length }} so far{% else %}none yet{% endif %};
+  + delayed, − pulled earlier). Only launches whose NET was given to the hour or
+  better in both snapshots are counted.
 </p>
 {% if not slips %}
   <div class="note">No notable slips yet — daily snapshots will fill this in as dates move.</div>
@@ -36,5 +37,31 @@
     </tbody>
   </table>
   </div>
+{% endif %}
+
+{% if precision_changes %}
+<h2>Placeholder dates set or replaced (not counted)</h2>
+<p class="muted">
+  When Launch Library 2 only knows the month (or day) of a launch, it publishes a
+  placeholder such as the last day of the month at 00:00 UTC. A switch between a
+  placeholder and a timed NET changes what is known, so it is not counted as a slip.
+</p>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Compared</th><th>Mission</th><th>NET before → after</th><th>Precision</th></tr>
+  </thead>
+  <tbody>
+  {% for s in precision_changes %}
+    <tr>
+      <td class="num">{{ s.snapshot_a }} → {{ s.snapshot_b }}</td>
+      <td>{{ s.name }}</td>
+      <td class="num">{{ s.net_a }} → {{ s.net_b }}</td>
+      <td>{{ s.precision_a }} → {{ s.precision_b }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
 {% endif %}
 {% endblock %}

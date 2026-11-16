@@ -62,3 +62,24 @@ def test_provider_and_rocket_pages_exist(tmp_path: Path):
     assert len(rockets) >= 1
     # SpaceX should be present in current fixture snapshot
     assert (out / "providers" / "spacex" / "index.html").is_file()
+
+
+def test_data_page_and_precision_filter(tmp_path: Path):
+    out = tmp_path / "site"
+    build_mod.build(out_dir=out, base_path="")
+    data_index = out / "data" / "index.html"
+    assert data_index.is_file()
+    assert (out / "data" / "slips.csv").is_file()
+    assert list((out / "data" / "snapshots").glob("*.csv"))
+    assert "data/" in (out / "sitemap.xml").read_text(encoding="utf-8")
+    html = data_index.read_text(encoding="utf-8")
+    assert "The Space Devs" in html and "terms of use" in html
+    # Placeholder-date rows never feed the slip tables/chart
+    slips = build_mod.read_slips()
+    flagged = {r["name"] for r in slips if r.get("precision_flag") != "ok"}
+    ok_names = {r["name"] for r in slips if r.get("precision_flag") == "ok"}
+    chart = out / "static" / "slip-chart.svg"
+    if chart.is_file():
+        svg = chart.read_text(encoding="utf-8")
+        for name in flagged - ok_names:
+            assert f">{build_mod._short_label(name, 36)}</text>" not in svg

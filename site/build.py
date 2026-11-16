@@ -20,6 +20,14 @@ from xml.sax.saxutils import escape as xml_escape
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+try:  # installed package (CI/Pages: pip install -e .)
+    from launch_delay_watch.precision import infer_class, precision_flag
+except ImportError:  # pragma: no cover - running from a bare checkout
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+    from launch_delay_watch.precision import infer_class, precision_flag
+
 SITE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SITE_DIR.parent
 SNAPSHOT_DIR = REPO_ROOT / "data" / "snapshots"
@@ -103,6 +111,10 @@ def read_slips() -> list[dict[str, Any]]:
             slip_f = None
         item = dict(row)
         item["slip_days"] = slip_f
+        if not item.get("precision_flag"):
+            item["precision_a"] = infer_class(item.get("net_a", ""))
+            item["precision_b"] = infer_class(item.get("net_b", ""))
+            item["precision_flag"] = precision_flag(item["precision_a"], item["precision_b"])
         out.append(item)
     return out
 
@@ -182,7 +194,8 @@ def slip_stats(slips: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any
     return stats
 
 
-NOTABLE_SLIP_ABS = 0.01  # ignore tiny float noise in slip tables/charts
+# Same threshold as `ldw headline`: smaller moves are T-0 refinements, not slips.
+NOTABLE_SLIP_ABS = 1.0 / 24.0
 HOME_UPCOMING_LIMIT = 12
 HOME_SLIPS_LIMIT = 10
 CHART_TOP_N = 8
@@ -421,7 +434,22 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
 
     snap_path, raw_rows = read_latest_snapshot()
     launches = enrich_launches(raw_rows, now)
-    slips = read_slips()
+    slips_all = read_slips()
+    # Only comparisons where both NETs were timed (hour precision or better) count
+    # as schedule moves; placeholder changes are listed separately on /slips/.
+    slips = [r for r in slips_all if r.get("precision_flag") == "ok"]
+    precision_changes = _format_slip_rows(
+        sorted(
+            (
+                r
+                for r in slips_all
+                if r.get("precision_flag") == "precision_change"
+                and r.get("slip_days") is not None
+            ),
+            key=lambda r: str(r.get("snapshot_b") or ""),
+            reverse=True,
+        )
+    )
     provider_stats = slip_stats(slips, "provider")
     rocket_stats = slip_stats(slips, "rocket")
     recent_slips = latest_slips_for_home(slips, limit=HOME_SLIPS_LIMIT)
@@ -453,7 +481,8 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
         "snapshot_date_display": snapshot_date_display,
         "launch_count": len(launches),
         "slip_count": len(slips),
-        "has_slip_history": len(slips) > 0,
+        "comparison_count": len(slips_all),
+        "has_slip_history": len(slips_all) > 0,
         "min_slip_samples": MIN_SLIP_SAMPLES,
     }
 
@@ -464,6 +493,7 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
         "providers/",
         "rockets/",
         "texas/",
+        "data/",
         "about/",
         "privacy/",
     ]
@@ -478,7 +508,9 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
             chart_rows, dest / "static" / "slip-chart.svg"
         )
     chart_caption = (
-        "Largest day-to-day NET moves so far (days; + delayed, − pulled earlier)."
+        "Largest day-over-day NET moves of at least 1 hour (days; + delayed, − pulled "
+        "earlier). Only NETs given to the hour or better; day/month placeholder dates "
+        "are excluded."
     )
 
     # Home
@@ -527,6 +559,7 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
         ),
         canonical_path="slips/",
         slips=all_notable_slips,
+        precision_changes=precision_changes,
     )
     write_page(dest / "slips" / "index.html", slips_page)
 
@@ -612,6 +645,27 @@ def build(out_dir: Path | None = None, base_path: str | None = None) -> dict[str
         snapshot_filename=snap_path.name if snap_path else None,
     )
     write_page(dest / "about" / "index.html", about)
+
+    # Data downloads: copy the CSVs so /data/*.csv work on the site itself
+    data_out = dest / "data"
+    (data_out / "snapshots").mkdir(parents=True, exist_ok=True)
+    snapshot_files = sorted(SNAPSHOT_DIR.glob("????-??-??.csv")) if SNAPSHOT_DIR.is_dir() else []
+    for f in snapshot_files:
+        shutil.copy2(f, data_out / "snapshots" / f.name)
+    if SLIPS_PATH.is_file():
+        shutil.copy2(SLIPS_PATH, data_out / "slips.csv")
+    data_page = env.get_template("data.html").render(
+        **common,
+        page_title="Data downloads — Launch Delay Watch",
+        meta_description=(
+            "Download the Launch Delay Watch CSVs: daily Launch Library 2 snapshots "
+            "and the cumulative day-over-day NET comparison file."
+        ),
+        canonical_path="data/",
+        snapshot_names=[f.name for f in reversed(snapshot_files)],
+        has_slips_csv=SLIPS_PATH.is_file(),
+    )
+    write_page(data_out / "index.html", data_page)
 
     # Privacy
     privacy = env.get_template("privacy.html").render(

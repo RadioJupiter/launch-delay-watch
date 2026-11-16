@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="pill"><a href="{{ base_path }}/">Home</a></p>
+<h1>Data downloads</h1>
+<p class="lede">
+  Every number on this site is computed from these CSV files. They are also in the
+  <a href="https://github.com/RadioJupiter/launch-delay-watch/tree/main/data">GitHub repository</a>
+  with full history.
+</p>
+
+<div class="card">
+  <h2>Files</h2>
+  <ul>
+    {% if has_slips_csv %}
+    <li><a href="{{ base_path }}/data/slips.csv">slips.csv</a>: one row per launch per
+      consecutive pair of daily snapshots ({{ comparison_count }} rows), with
+      <code>slip_days</code> and the <code>precision_flag</code> used to exclude placeholder dates.</li>
+    {% endif %}
+    {% for name in snapshot_names %}
+    <li><a href="{{ base_path }}/data/snapshots/{{ name }}">snapshots/{{ name }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Columns and method</h2>
+  <p>
+    Each snapshot is one request to the Launch Library 2 <code>launch/upcoming</code>
+    endpoint (next 100 launches). <code>slip_days</code> is the newer NET minus the older
+    NET, in days (+ = later). <code>precision_flag</code> is <code>ok</code> only when both
+    NETs are given to the hour or better; <code>precision_change</code> and
+    <code>low_precision</code> rows (day, month, quarter or year placeholders such as
+    <code>2026-11-30T00:00:00Z</code>) are excluded from slip statistics.
+    The full schema and limitations are in the
+    <a href="https://github.com/RadioJupiter/launch-delay-watch#method">README</a>.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Source and terms</h2>
+  <p>
+    Launch records come from <a href="https://thespacedevs.com/llapi">Launch Library 2</a>
+    by <a href="https://thespacedevs.com/">The Space Devs</a>, used under their
+    <a href="https://github.com/TheSpaceDevs/Tutorials/blob/main/faqs/faq_TSD.md#terms-of-use">terms of use</a>.
+    The Space Devs do not guarantee the accuracy of the data, and neither does this project.
+    Please credit The Space Devs if you reuse it. The code is MIT licensed.
+  </p>
+</div>
+{% endblock %}

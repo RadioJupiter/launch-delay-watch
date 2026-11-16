@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this dataset or software, please cite it as below, and credit The Space Devs (Launch Library 2) for the underlying launch records."
+title: "Launch Delay Watch: daily snapshots of public rocket launch NET dates and their day-over-day changes"
+type: dataset
+authors:
+  - name: "RadioJupiter"
+repository-code: "https://github.com/RadioJupiter/launch-delay-watch"
+url: "https://radiojupiter.github.io/launch-delay-watch/"
+license: MIT
+version: "0.2.0"
+date-released: "2026-11-16"
+keywords:
+  - spaceflight
+  - rocket launches
+  - launch schedule
+  - open data
+  - Launch Library 2
+references:
+  - type: software
+    title: "Launch Library 2 API"
+    authors:
+      - name: "The Space Devs"
+    url: "https://thespacedevs.com/llapi"
+    notes: "Source of all launch records; used under The Space Devs terms of use (https://github.com/TheSpaceDevs/Tutorials/blob/main/faqs/faq_TSD.md#terms-of-use)."

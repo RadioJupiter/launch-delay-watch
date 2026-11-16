@@ -1,39 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>About &amp; data</h1>
+<h1>About &amp; method</h1>
 <p class="lede">
   Launch Delay Watch is an open-source dataset and site that tracks how rocket
-  launch NET dates move over time.
+  launch NET (no-earlier-than) dates move over time.
 </p>
+
+<div class="card">
+  <h2>Method</h2>
+  <ol>
+    <li>Once a day a GitHub Action makes one request to the Launch Library 2
+      <code>launch/upcoming</code> endpoint (next 100 launches) and commits the result as a CSV.</li>
+    <li>Each snapshot is compared with the previous day's. A launch present in both is one
+      <em>comparison</em>; <code>slip_days</code> = new NET − old NET.</li>
+    <li>A comparison counts only if both NETs are given to the hour or better.
+      Day, month, quarter and year placeholders (for example <code>2026-11-30T00:00:00Z</code>
+      for "sometime in November") are excluded, and a switch between a placeholder and a
+      real time is flagged as a precision change, not a slip.</li>
+    <li>A <em>slip</em> is a move later of at least 1 hour. Smaller moves are T-0
+      refinements (for example a liftoff late in the launch window) and are reported
+      separately.</li>
+  </ol>
+  <p>
+    Precision comes from Launch Library 2's <code>net_precision</code> field (recorded from
+    2026-11-16). Earlier snapshots use a heuristic that matched that field on all 100
+    upcoming launches checked on 2026-11-16: a NET at exactly 00:00:00 UTC with a
+    zero-length window is a placeholder. Run <code>ldw headline</code> to reproduce every
+    published number.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Limitations</h2>
+  <ul>
+    <li>One snapshot per day (taken mid-day UTC, not at a fixed minute), so moves that
+      happen and reverse within a day are missed, and slip counts are a lower bound.</li>
+    <li>Only the next 100 upcoming launches are captured; launches farther out appear
+      only once they enter that window.</li>
+    <li>A NET is a public target, not an official range schedule. Launch Library 2 is
+      curated by volunteers from public sources and can lag or differ from provider
+      announcements.</li>
+    <li>The record started on 2026-11-03, so the sample is still small.</li>
+  </ul>
+</div>
 
 <div class="card">
   <h2>Attribution</h2>
   <p>
     Launch records come from
     <a href="https://thespacedevs.com/llapi">Launch Library 2</a>
-    by <a href="https://thespacedevs.com/">The Space Devs</a>.
-    Please attribute them when you reuse launch metadata. This site only reads
-    committed CSV snapshots — it does not call the API at build time.
+    by <a href="https://thespacedevs.com/">The Space Devs</a>, used under their
+    <a href="https://github.com/TheSpaceDevs/Tutorials/blob/main/faqs/faq_TSD.md#terms-of-use">terms of use</a>.
+    This project is not affiliated with The Space Devs. Please credit them when you reuse
+    launch data. This site only reads committed CSV snapshots; it does not call the API at
+    build time.
   </p>
 </div>
 
 <div class="card">
   <h2>Download the dataset</h2>
   <ul>
-    <li>
-      {% if snapshot_filename %}
-      <a href="https://raw.githubusercontent.com/RadioJupiter/launch-delay-watch/main/data/snapshots/{{ snapshot_filename }}">
-        Latest snapshot CSV ({{ snapshot_filename }})
-      </a>
-      {% else %}
-      No snapshot file yet.
-      {% endif %}
-    </li>
-    <li>
-      <a href="https://raw.githubusercontent.com/RadioJupiter/launch-delay-watch/main/data/slips.csv">
-        Cumulative slips.csv
-      </a>
-    </li>
+    <li><a href="{{ base_path }}/data/">All CSV downloads on this site</a></li>
     <li>
       <a href="https://github.com/RadioJupiter/launch-delay-watch/tree/main/data/snapshots">
         All snapshots on GitHub
@@ -41,14 +68,15 @@
     </li>
   </ul>
   <p class="muted">Latest snapshot in this build: <strong>{{ snapshot_date }}</strong>
-    ({{ launch_count }} launches). Slip history rows: {{ slip_count }}.</p>
+    ({{ launch_count }} launches). Comparisons recorded: {{ comparison_count }}
+    ({{ slip_count }} with timed NETs).</p>
 </div>
 
 <div class="card">
   <h2>CLI &amp; code</h2>
   <p>
     Install from the repo and run <code>ldw snapshot</code>, <code>ldw diff</code>,
-    <code>ldw stats</code>, <code>ldw chart</code>.
+    <code>ldw stats</code>, <code>ldw chart</code> and <code>ldw headline</code>.
     Source: <a href="https://github.com/RadioJupiter/launch-delay-watch">github.com/RadioJupiter/launch-delay-watch</a>
     (MIT).
   </p>
